@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+set -eu
+set -o pipefail
+
+VERSION="0.2.0"
+DEBUG=""
+RECONNECT=1
+PLUGIN=""
+
+usage() {
+cat <<DATA
+Usage: docker-event-plugin [OPTION...] PLUGIN [PLUGIN_OPTION...]
+
+PLUGIN:
+  plugin file or directory
+
+OPTION:
+  -d, --debug         Debug mode
+      --no-reconnect  Do not automatically reconnect on failure
+      --help          Show help
+  -v, --version       Show version
+
+PLUGIN_OPTION:
+  Passed to plugin
+
+DATA
+exit 0
+}
+
+version() {
+  echo "$VERSION"
+  exit 0
+}
+
+abort() {
+  echo "$1" >&2
+  exit 1
+}
+
+log() {
+  local message=$1
+  shift
+  printf "$message\n" "$@"
+}
+
+handler() { :; }
+
+call_plugin() {
+  local event=$1
+  shift
+
+  [[ $DEBUG ]] && log "%-14s %s" "$event" "$*"
+  set +u
+  handler "$event" "$@"
+  set -u
+}
+
+docker_ps() {
+  local id image
+  docker ps --no-trunc | tail -n +2 | while read -r id image _; do
+    echo "-" "$id:" "(from $image)" "exists"
+  done
+}
+
+docker_events() {
+  (docker_ps; docker events) | while read -ra fields; do
+    local num=${#fields[@]}
+    local datetime=${fields[0]}
+
+    if (( num == 3 )); then
+      # Docker images will report the following events
+      #
+      #   delete, import, pull, push, tag, untag
+      #
+      # format: DATETIME IMAGE: EVENT
+      local image=${fields[1]:0:-1}
+      local event=${fields[2]}
+      call_plugin "$event" "$image" "$datetime"
+      continue
+    fi
+
+    if (( num == 5 )); then
+      # Docker containers will report the following events
+      #
+      #   archive-path, attach, commit, copy, create, destroy, die,
+      #   export, extract-to-dir, kill, oom, pause, rename, resize,
+      #   restart, start, stop, top, unpause
+      #
+      # format: DATETIME CONTAINER: (from IMAGE) EVENT
+      local container=${fields[1]:0:-1}
+      local from_image=${fields[3]:0:-1}
+      local event=${fields[4]}
+      call_plugin "$event" "$container" "$from_image" "$datetime"
+      continue
+    fi
+
+    if (( num >= 6 )); then
+      # Docker containers will report the following events
+      #
+      #   exec_create, exec_start
+      #
+      # format: DATETIME CONTAINER: (from IMAGE) EVENT: COMMAND
+      local container=${fields[1]:0:-1}
+      local from_image=${fields[3]:0:-1}
+      local event=${fields[4]:0:-1}
+      local command=${fields[*]:5}
+      call_plugin "$event" "$container" "$from_image" "$datetime" "$command"
+      continue
+    fi
+  done
+}
+
+while (($# > 0)); do
+  case $1 in
+    -d | --debug)        DEBUG=1 ;;
+         --no-reconnect) RECONNECT="" ;;
+         --help)         usage ;;
+    -v | --version)      version ;;
+    -*) abort "No such option" ;;
+    *) break ;;
+  esac
+  shift
+done
+
+if (($# == 0)); then
+  log "Not Specify the plugin"
+else
+  [[ -d $1 ]] && PLUGIN="$1/handler" || PLUGIN=$1
+  shift
+  [[ -f "$PLUGIN" ]] || abort "Plugin not found"
+  PLUGIN=$(readlink -f "$PLUGIN")
+  cd "${PLUGIN%/*}"
+  set +u
+  . "$PLUGIN"
+  set -u
+fi
+
+while true; do
+  log "Connectiong to docker"
+  docker_events "$@" ||:
+  log "Disconnected from docker"
+  [[ $RECONNECT ]] || exit 1
+  log "Waiting for connecting to docker..."
+  sleep 5
+done

@@ -1,0 +1,21 @@
+echo "PLUGIN OPTION: $@"
+
+handler() {
+  event=$1
+
+  case $1 in
+    archive-path | attach | commit | copy | create | destroy | die | exists | \
+    export | extract-to-dir | kill | oom | pause | rename | resize | restart | \
+    start | stop | top | unpause)
+      echo "$1 CONTAINER:${2:0:12} IMAGE:$3 DATETIME:$4"
+      ;;
+    delete | import | pull | push | tag | untag)
+      echo "$1 IMAGE:$2 DATETIME:$3"
+      ;;
+    exec_create | exec_start)
+      echo "$1 CONTAINER:${2:0:12} FROM:$3 DATETIME:$4 COMMAND:$5"
+      ;;
+    *)
+      echo "[unknown event?] $@"
+  esac
+}
