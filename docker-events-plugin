@@ -57,6 +57,20 @@ call_plugin() {
   set -u
 }
 
+docker_version() {
+  local version
+  version=$("$DOCKER_PATH" --version)
+  version=${version%%,*}
+  version=${version##* }
+  echo $version
+}
+
+requires() {
+  local version
+  version=$(printf "%s\n%s" "$DOCKER_CLIENT_VERSION" "$1" | sort -V | head -n1)
+  [[ $1 = "$version" ]]
+}
+
 # docker events format
 #
 # * 0.10.0 and before
@@ -77,7 +91,7 @@ call_plugin() {
 # * 1.10.0
 # 2016-02-06T22:35:09.383073972Z container create b5a343f8111a73669624f541cfec7405aaf2547e809c0b6c850cacb962286743 (image=busybox, name=lonely_lovelace)
 
-parse() {
+parser1.2.0() {
   local fields
   read -ra fields <<<"$1"
 
@@ -122,9 +136,11 @@ main() {
   (( $? )) && return $?
 
   "$DOCKER_PATH" events | while read -r fields; do
-    parse "$fields"
+    "$PARSER" "$fields"
   done
 }
+
+DOCKER_CLIENT_VERSION=$(docker_version)
 
 while (($# > 0)); do
   case $1 in
@@ -149,6 +165,16 @@ else
   set +u
   . "$PLUGIN"
   set -u
+fi
+
+log "Docker client version $DOCKER_CLIENT_VERSION"
+
+if requires "1.10.0"; then
+  abort "Not support docker client $DOCKER_CLIENT_VERSION"
+elif requires "1.2.0"; then
+  PARSER="parser1.2.0"
+else
+  abort "docker client $DOCKER_CLIENT_VERSION is too old"
 fi
 
 while true; do
