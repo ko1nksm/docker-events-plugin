@@ -66,7 +66,6 @@ docker_ps() {
 
 docker_events() {
   (docker_ps; "$DOCKER_PATH" events) | while read -ra fields; do
-    declare -A args
     local num=${#fields[@]}
     local datetime=${fields[0]}
 
@@ -93,7 +92,6 @@ docker_events() {
       local container=${fields[1]:0:-1}
       local from_image=${fields[3]:0:-1}
       local event=${fields[4]}
-      args["image"]=$from_image
       call_plugin "container" "$event" "$container" "$datetime"
       continue
     fi
@@ -108,12 +106,9 @@ docker_events() {
       local from_image=${fields[3]:0:-1}
       local event=${fields[4]:0:-1}
       local command=${fields[*]:5}
-      args["image"]=$from_image
       call_plugin "container" "$event" "$container" "$datetime" "$command"
       continue
     fi
-
-    unset args
   done
 }
 

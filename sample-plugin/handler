@@ -8,25 +8,17 @@ handler() {
     container)
       case $event in
         exec_create | exec_start)
-          echo -n "$event CONTAINER:${3:0:20} DATETIME:$4 COMMAND:$5"
+          echo "$event CONTAINER:${3:0:20} DATETIME:$4 COMMAND:$5"
           ;;
         *)
-          echo -n "$event CONTAINER:${3:0:20} DATETIME:$4"
+          echo "$event CONTAINER:${3:0:20} DATETIME:$4"
           ;;
       esac
       ;;
     image)
-      echo -n "$event IMAGE:${3:0:20} DATETIME:$4"
+      echo "$event IMAGE:${3:0:20} DATETIME:$4"
       ;;
     *)
-      echo -n"[unknown event?] $@"
+      echo "[unknown event?] $@"
   esac
-
-  echo -n " ("
-  local comma=""
-  for arg in  "${!args[@]}"; do
-    echo -n "$comma$arg=${args[$arg]}"
-    comma=", "
-  done
-  echo ")"
 }
