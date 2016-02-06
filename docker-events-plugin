@@ -94,17 +94,12 @@ parse() {
   fi
 }
 
-docker_ps() {
-  local id image
-  "$DOCKER_PATH" ps --no-trunc | tail -n +2 | while read -r id image _; do
-    echo "-" "$id:" "(from $image)" "exists"
-  done
-}
-
 main() {
-  docker_ps | while read -r fields; do
-    parse "$fields"
+  "$DOCKER_PATH" ps --no-trunc | tail -n +2 | while read -r id _; do
+    call_plugin "container" "exists" "$id"
   done
+
+  (( $? )) && return $?
 
   "$DOCKER_PATH" events | while read -r fields; do
     parse "$fields"
