@@ -3,6 +3,7 @@
 set -eu
 set -o pipefail
 
+DOCKER_PATH=${DOCKER_PATH:-docker}
 VERSION="0.2.0"
 DEBUG=""
 RECONNECT=1
@@ -58,13 +59,13 @@ call_plugin() {
 
 docker_ps() {
   local id image
-  docker ps --no-trunc | tail -n +2 | while read -r id image _; do
+  "$DOCKER_PATH" ps --no-trunc | tail -n +2 | while read -r id image _; do
     echo "-" "$id:" "(from $image)" "exists"
   done
 }
 
 docker_events() {
-  (docker_ps; docker events) | while read -ra fields; do
+  (docker_ps; "$DOCKER_PATH" events) | while read -ra fields; do
     local num=${#fields[@]}
     local datetime=${fields[0]}
 
