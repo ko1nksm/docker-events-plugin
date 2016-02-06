@@ -58,50 +58,38 @@ call_plugin() {
 }
 
 parse() {
-  local fields num datetime
-
+  local fields
   read -ra fields <<<"$1"
-  num=${#fields[@]}
-  datetime=${fields[0]}
 
-  if (( num == 3 )); then
-    # Docker images will report the following events
-    #
+  if (( ${#fields[@]} == 3 )); then
+    # images events:
     #   delete, import, pull, push, tag, untag
     #
-    # format: DATETIME IMAGE: EVENT
-    local image=${fields[1]:0:-1}
-    local event=${fields[2]}
-    call_plugin "image" "$event" "$image" "$datetime"
+    # event format: DATETIME IMAGE: EVENT
+    # call plugin: "image" event image datetime
+    call_plugin "image" "${fields[2]}" "${fields[1]:0:-1}" "${fields[0]}"
     return 0
   fi
 
-  if (( num == 5 )); then
-    # Docker containers will report the following events
-    #
+  if (( ${#fields[@]} == 5 )); then
+    # containers events:
     #   archive-path, attach, commit, copy, create, destroy, die,
     #   export, extract-to-dir, kill, oom, pause, rename, resize,
     #   restart, start, stop, top, unpause
     #
-    # format: DATETIME CONTAINER: (from IMAGE) EVENT
-    local container=${fields[1]:0:-1}
-    local from_image=${fields[3]:0:-1}
-    local event=${fields[4]}
-    call_plugin "container" "$event" "$container" "$datetime"
+    # event format: DATETIME CONTAINER: (from IMAGE) EVENT
+    # call plugin: "container" event container datetime
+    call_plugin "container" "${fields[4]}" "${fields[1]:0:-1}" "${fields[0]}"
     return 0
   fi
 
-  if (( num >= 6 )); then
-    # Docker containers will report the following events
-    #
+  if (( ${#fields[@]} >= 6 )); then
+    # containers events:
     #   exec_create, exec_start
     #
-    # format: DATETIME CONTAINER: (from IMAGE) EVENT: COMMAND
-    local container=${fields[1]:0:-1}
-    local from_image=${fields[3]:0:-1}
-    local event=${fields[4]:0:-1}
-    local command=${fields[*]:5}
-    call_plugin "container" "$event" "$container" "$datetime" "$command"
+    # event format: DATETIME CONTAINER: (from IMAGE) EVENT: COMMAND
+    # call plugin: "container" event container datetime command
+    call_plugin "container" "${fields[4]:0:-1}" "${fields[1]:0:-1}" "${fields[0]}" "${fields[*]:5}"
     return 0
   fi
 }
