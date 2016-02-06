@@ -1,21 +1,32 @@
 echo "PLUGIN OPTION: $@"
 
 handler() {
-  event=$1
+  filter=$1
+  event=$2
 
-  case $1 in
-    archive-path | attach | commit | copy | create | destroy | die | exists | \
-    export | extract-to-dir | kill | oom | pause | rename | resize | restart | \
-    start | stop | top | unpause)
-      echo "$1 CONTAINER:${2:0:12} IMAGE:$3 DATETIME:$4"
+  case $filter in
+    container)
+      case $event in
+        exec_create | exec_start)
+          echo -n "$event CONTAINER:${3:0:20} DATETIME:$4 COMMAND:$5"
+          ;;
+        *)
+          echo -n "$event CONTAINER:${3:0:20} DATETIME:$4"
+          ;;
+      esac
       ;;
-    delete | import | pull | push | tag | untag)
-      echo "$1 IMAGE:$2 DATETIME:$3"
-      ;;
-    exec_create | exec_start)
-      echo "$1 CONTAINER:${2:0:12} FROM:$3 DATETIME:$4 COMMAND:$5"
+    image)
+      echo -n "$event IMAGE:${3:0:20} DATETIME:$4"
       ;;
     *)
-      echo "[unknown event?] $@"
+      echo -n"[unknown event?] $@"
   esac
+
+  echo -n " ("
+  local comma=""
+  for arg in  "${!args[@]}"; do
+    echo -n "$comma$arg=${args[$arg]}"
+    comma=", "
+  done
+  echo ")"
 }

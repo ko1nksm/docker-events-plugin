@@ -4,7 +4,7 @@ set -eu
 set -o pipefail
 
 DOCKER_PATH=${DOCKER_PATH:-docker}
-VERSION="0.2.0"
+VERSION="0.3.0"
 DEBUG=""
 RECONNECT=1
 PLUGIN=""
@@ -66,6 +66,7 @@ docker_ps() {
 
 docker_events() {
   (docker_ps; "$DOCKER_PATH" events) | while read -ra fields; do
+    declare -A args
     local num=${#fields[@]}
     local datetime=${fields[0]}
 
@@ -77,7 +78,7 @@ docker_events() {
       # format: DATETIME IMAGE: EVENT
       local image=${fields[1]:0:-1}
       local event=${fields[2]}
-      call_plugin "$event" "$image" "$datetime"
+      call_plugin "image" "$event" "$image" "$datetime"
       continue
     fi
 
@@ -92,7 +93,8 @@ docker_events() {
       local container=${fields[1]:0:-1}
       local from_image=${fields[3]:0:-1}
       local event=${fields[4]}
-      call_plugin "$event" "$container" "$from_image" "$datetime"
+      args["image"]=$from_image
+      call_plugin "container" "$event" "$container" "$datetime"
       continue
     fi
 
@@ -106,9 +108,12 @@ docker_events() {
       local from_image=${fields[3]:0:-1}
       local event=${fields[4]:0:-1}
       local command=${fields[*]:5}
-      call_plugin "$event" "$container" "$from_image" "$datetime" "$command"
+      args["image"]=$from_image
+      call_plugin "container" "$event" "$container" "$datetime" "$command"
       continue
     fi
+
+    unset args
   done
 }
 
