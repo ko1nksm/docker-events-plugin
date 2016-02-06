@@ -57,6 +57,55 @@ call_plugin() {
   set -u
 }
 
+parse() {
+  local fields num datetime
+
+  read -ra fields <<<"$1"
+  num=${#fields[@]}
+  datetime=${fields[0]}
+
+  if (( num == 3 )); then
+    # Docker images will report the following events
+    #
+    #   delete, import, pull, push, tag, untag
+    #
+    # format: DATETIME IMAGE: EVENT
+    local image=${fields[1]:0:-1}
+    local event=${fields[2]}
+    call_plugin "image" "$event" "$image" "$datetime"
+    return 0
+  fi
+
+  if (( num == 5 )); then
+    # Docker containers will report the following events
+    #
+    #   archive-path, attach, commit, copy, create, destroy, die,
+    #   export, extract-to-dir, kill, oom, pause, rename, resize,
+    #   restart, start, stop, top, unpause
+    #
+    # format: DATETIME CONTAINER: (from IMAGE) EVENT
+    local container=${fields[1]:0:-1}
+    local from_image=${fields[3]:0:-1}
+    local event=${fields[4]}
+    call_plugin "container" "$event" "$container" "$datetime"
+    return 0
+  fi
+
+  if (( num >= 6 )); then
+    # Docker containers will report the following events
+    #
+    #   exec_create, exec_start
+    #
+    # format: DATETIME CONTAINER: (from IMAGE) EVENT: COMMAND
+    local container=${fields[1]:0:-1}
+    local from_image=${fields[3]:0:-1}
+    local event=${fields[4]:0:-1}
+    local command=${fields[*]:5}
+    call_plugin "container" "$event" "$container" "$datetime" "$command"
+    return 0
+  fi
+}
+
 docker_ps() {
   local id image
   "$DOCKER_PATH" ps --no-trunc | tail -n +2 | while read -r id image _; do
@@ -65,50 +114,8 @@ docker_ps() {
 }
 
 docker_events() {
-  (docker_ps; "$DOCKER_PATH" events) | while read -ra fields; do
-    local num=${#fields[@]}
-    local datetime=${fields[0]}
-
-    if (( num == 3 )); then
-      # Docker images will report the following events
-      #
-      #   delete, import, pull, push, tag, untag
-      #
-      # format: DATETIME IMAGE: EVENT
-      local image=${fields[1]:0:-1}
-      local event=${fields[2]}
-      call_plugin "image" "$event" "$image" "$datetime"
-      continue
-    fi
-
-    if (( num == 5 )); then
-      # Docker containers will report the following events
-      #
-      #   archive-path, attach, commit, copy, create, destroy, die,
-      #   export, extract-to-dir, kill, oom, pause, rename, resize,
-      #   restart, start, stop, top, unpause
-      #
-      # format: DATETIME CONTAINER: (from IMAGE) EVENT
-      local container=${fields[1]:0:-1}
-      local from_image=${fields[3]:0:-1}
-      local event=${fields[4]}
-      call_plugin "container" "$event" "$container" "$datetime"
-      continue
-    fi
-
-    if (( num >= 6 )); then
-      # Docker containers will report the following events
-      #
-      #   exec_create, exec_start
-      #
-      # format: DATETIME CONTAINER: (from IMAGE) EVENT: COMMAND
-      local container=${fields[1]:0:-1}
-      local from_image=${fields[3]:0:-1}
-      local event=${fields[4]:0:-1}
-      local command=${fields[*]:5}
-      call_plugin "container" "$event" "$container" "$datetime" "$command"
-      continue
-    fi
+  (docker_ps; "$DOCKER_PATH" events) | while read -r fields; do
+    parse "$fields"
   done
 }
 
