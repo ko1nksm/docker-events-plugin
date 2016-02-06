@@ -101,8 +101,12 @@ docker_ps() {
   done
 }
 
-docker_events() {
-  (docker_ps; "$DOCKER_PATH" events) | while read -r fields; do
+main() {
+  docker_ps | while read -r fields; do
+    parse "$fields"
+  done
+
+  "$DOCKER_PATH" events | while read -r fields; do
     parse "$fields"
   done
 }
@@ -134,7 +138,7 @@ fi
 
 while true; do
   log "Connectiong to docker"
-  docker_events "$@" ||:
+  main ||:
   log "Disconnected from docker"
   [[ $RECONNECT ]] || exit 1
   log "Waiting for connecting to docker..."
