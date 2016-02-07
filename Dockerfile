@@ -1,6 +1,6 @@
 FROM alpine
 
-RUN apk add --update bash wget ca-certificates bind-tools jq \
+RUN apk add --update bash coreutils wget ca-certificates bind-tools jq \
     && rm -rf /var/cache/apk/*
 
 RUN wget -qO - https://get.docker.com/builds/Linux/x86_64/docker-1.9.1.tgz | tar zxf - \
