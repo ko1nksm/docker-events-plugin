@@ -1,24 +1,22 @@
 echo "PLUGIN OPTION: $@"
 
 handler() {
-  filter=$1
+  type=$1
   event=$2
+  id=${3:0:20}
 
-  case $filter in
+  case $type in
     container)
-      case $event in
-        exec_create | exec_start)
-          echo "$event CONTAINER:${3:0:20} DATETIME:$4 COMMAND:$5"
-          ;;
-        *)
-          echo "$event CONTAINER:${3:0:20} DATETIME:$4"
-          ;;
-      esac
+      if [[ $event = exec_* ]]; then
+        printf "TYPE:%-10s EVENT:%-12s ID:$id DATETIME:$4 COMMAND:$5\n" "$type" "$event"
+        return 0
+      fi
+      printf "TYPE:%-10s EVENT:%-12s ID:$id DATETIME:$4\n" "$type" "$event"
       ;;
-    image)
-      echo "$event IMAGE:${3:0:20} DATETIME:$4"
+    image | network | volume)
+      printf "TYPE:%-10s EVENT:%-12s ID:$id DATETIME:$4\n" "$type" "$event"
       ;;
     *)
-      echo "[unknown event?] $@"
+      echo "[unknown type?] $@"
   esac
 }

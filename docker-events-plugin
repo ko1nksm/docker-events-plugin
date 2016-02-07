@@ -128,6 +128,23 @@ parser1.2.0() {
   fi
 }
 
+parser1.10.0() {
+  local fields="${1% (*}"
+  read -ra fields <<<"$fields"
+
+  if [[ ${fields[2]} = *: ]]; then
+    # event format: DATETIME TYPE EVENT: COMMAND ID (name=value, ...)
+    # call plugin: type event id datetime command
+    local rest=${fields[*]:3}
+    call_plugin "${fields[1]}" "${fields[2]:0:-1}" "${rest##* }" "${rest% *}"
+  else
+    # event format: DATETIME TYPE EVENT ID (name=value, ...)
+    # call plugin: type event id datetime
+    call_plugin "${fields[1]}" "${fields[2]}" "${fields[3]}" "${fields[0]}"
+  fi
+}
+
+
 main() {
   "$DOCKER_PATH" ps --no-trunc | tail -n +2 | while read -r id _; do
     call_plugin "container" "exists" "$id"
@@ -170,7 +187,7 @@ fi
 log "Docker client version $DOCKER_CLIENT_VERSION"
 
 if requires "1.10.0"; then
-  abort "Not support docker client $DOCKER_CLIENT_VERSION"
+  PARSER="parser1.10.0"
 elif requires "1.2.0"; then
   PARSER="parser1.2.0"
 else

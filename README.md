@@ -30,15 +30,15 @@ See sample-plugin directory in repository.
 
 ## Support events
 
+Depends on docker version.
+
+See https://docs.docker.com/engine/reference/commandline/events/
+
 **Events related image**
 
 ```
 delete, import, pull, push, tag, untag
 ```
-
-Arguments that passed to the plugin.
-
-``EVENT`` ``IMAGE`` ``DATETIME``
 
 
 **Events related container**
@@ -52,9 +52,6 @@ resize, restart, start, stop, top, unpause
 Note: **exists** is not docker native event.
 exists event is raised when containers found at before listening for events.
 
-Arguments that passed to the plugin.
-
-``EVENT`` ``CONTAINER`` ``IMAGE DATETIME``
 
 **Events related docker exec**
 
@@ -62,13 +59,17 @@ Arguments that passed to the plugin.
 exec_create, exec_start
 ```
 
-Arguments that passed to the plugin.
+**Events related network**
 
-``EVENT`` ``CONTAINER`` ``IMAGE`` ``DATETIME`` ``COMMAND``
+```
+connect, create, destroy, disconnect
+```
 
-**About events**
+**Events related volume**
 
-* https://docs.docker.com/engine/reference/commandline/events/
+```
+create, destroy, mount, umount
+```
 
 ## Using pre-build docker image
 
