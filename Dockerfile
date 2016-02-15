@@ -1,4 +1,5 @@
 FROM alpine
+MAINTAINER Koichi Nakashima <koichi@nksm.name>
 
 RUN apk add --update bash coreutils wget ca-certificates bind-tools jq \
     && rm -rf /var/cache/apk/*
